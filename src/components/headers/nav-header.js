@@ -1,4 +1,4 @@
-import { SearchRounded, ShoppingCart } from "@mui/icons-material";
+
 import React from "react";
 import { Link } from "react-router-dom";
 import logo from "../../assets/img/authentors.webp";

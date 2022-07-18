@@ -8,8 +8,15 @@ import client1 from "../../assets/img/client1.webp";
 import client2 from "../../assets/img/client2.webp";
 import client3 from "../../assets/img/client3.webp";
 import Footer from "../../layouts/footer";
+import ModalBox from "../../components/Modals/ModalBox";
+import ProfielForm from "../../components/forms/profile-form";
 const data = [{}];
-function HomeComponent({ handleLogin }) {
+function HomeComponent({
+  handleLogin,
+  handleOpenModal,
+  handleCloseModal,
+  openModal,
+}) {
   const settings = {
     dots: true,
     infinite: true,
@@ -285,7 +292,10 @@ function HomeComponent({ handleLogin }) {
           </div>
         </div>
       </div>
-
+      <ModalBox
+        open={openModal}
+        content={<ProfielForm handleCloseModal={handleCloseModal} />}
+      />
       <Footer />
     </div>
   );

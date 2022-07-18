@@ -4,12 +4,14 @@ import {
   setAuth,
   setError,
   setLoading,
+  setSuccess,
 } from "./authentication-reducer";
 import { clear } from "../../redux/clear";
 
 function* handleLogin() {
   try {
     yield put(setLoading(true));
+    yield put(setSuccess(false));
     yield put(setError(""));
     const embedKukai = yield select(getEmbedKukai);
     console.log("first", embedKukai.initialized);
@@ -20,6 +22,7 @@ function* handleLogin() {
   //  yield call([embedKukai, "logout"]);
     const response = yield call([embedKukai, "login"]);
     yield put(setAuth({ ...response }));
+    yield put(setSuccess(true));
 
     yield put(setLoading(false));
   } catch (error) {
