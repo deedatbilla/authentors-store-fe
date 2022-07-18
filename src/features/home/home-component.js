@@ -85,7 +85,7 @@ function HomeComponent({ handleLogin }) {
         </div>
       </div>
 
-      <div className="bg-gray-100 mx-12 py-12">
+      <div className="bg-gray-100 mx-12 py-12" id="why">
         <p className="text-left text-4xl font-bold">Why Authentors?</p>
         <div className="flex flex-col space-y-6 mt-4">
           <p className="">
@@ -120,7 +120,7 @@ function HomeComponent({ handleLogin }) {
         </div>
       </div>
 
-      <div className=" px-12 py-12">
+      <div className=" px-12 py-12" id="graduate">
         <div className="grid grid-cols-2 gap-2 items-center">
           <div>
             <img src="/img/hat.webp" alt="d" className="w-full" />
@@ -194,7 +194,7 @@ function HomeComponent({ handleLogin }) {
         </div>
       </div>
 
-      <div className="px-12 py-8">
+      <div className="px-12 py-8" id="learn">
         <div className="grid grid-cols-12 gap-3 items-center">
           <div className=" bg-gray-200 col-span-8 space-y-7 flex flex-col py-5 px-3">
             <p className="text-3xl font-bold">Educator Solution</p>

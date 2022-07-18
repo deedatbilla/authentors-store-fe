@@ -1,7 +1,5 @@
-import { history } from "../../helpers/browser";
 import { call, put, takeEvery, takeLatest, select } from "redux-saga/effects";
 import {
-  getAuth,
   getEmbedKukai,
   setAuth,
   setError,
@@ -21,7 +19,6 @@ function* handleLogin() {
     }
   //  yield call([embedKukai, "logout"]);
     const response = yield call([embedKukai, "login"]);
-    console.log(response);
     yield put(setAuth({ ...response }));
 
     yield put(setLoading(false));

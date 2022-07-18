@@ -4,18 +4,18 @@ import { Link } from "react-router-dom";
 import logo from "../../assets/img/authentors.webp";
 function NavHeader() {
   return (
-    <div className=" flex items-center justify-between  px-10 py-4 shadow-lg w-full">
-      <img src={logo} width={150} alt="logo" />
+    <div className=" flex items-center justify-between  px-10 py-4 shadow-lg w-full sticky top-0 bg-white">
+      <img src={logo} width={200} alt="logo" />
 
-      <Link to={"/"}>
-        <p>Why authentors</p>
-      </Link>
-      <Link>
+      <a href="#why">
+        <p>Why authentors?</p>
+      </a>
+      <a href="#graduate">
         <p>Graduate solution</p>
-      </Link>
-      <Link>
+      </a>
+      <a href="#learn">
         <p>Educator solution</p>
-      </Link>
+      </a>
       <Link>
         <p>Market place</p>
       </Link>

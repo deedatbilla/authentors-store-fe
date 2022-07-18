@@ -1,12 +1,12 @@
 import { configureStore, getDefaultMiddleware } from "@reduxjs/toolkit";
 import {
-  FLUSH,
-  PAUSE,
-  PERSIST,
+  // FLUSH,
+  // PAUSE,
+  // PERSIST,
   persistReducer,
-  PURGE,
-  REGISTER,
-  REHYDRATE,
+  // PURGE,
+  // REGISTER,
+  // REHYDRATE,
 } from "redux-persist";
 import createSagaMiddleware from "redux-saga";
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import HomeComponent from "./home-component";
 import { connect } from "react-redux";
 import { compose } from "@reduxjs/toolkit";
