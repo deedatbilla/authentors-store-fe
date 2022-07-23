@@ -26,7 +26,15 @@ const HomeContainer = compose(
   const handleCloseModal = () => {
     setOPenModal(false);
   };
-
+const payload={
+    token:"",
+    userType:"",
+    pk:"",
+    pkh:"",
+    email:"",
+    name:"",
+    profileImg:""
+}
   useEffect(() => {
     if (success) {
       handleOpenModal();

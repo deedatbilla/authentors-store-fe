@@ -20,7 +20,7 @@ function DropDownComponent({
         value={value}
         className={`${
           error ? "ring-1 ring-red" : ""
-        } px-3 rounded-16 w-full dark:bg-primary-800 dark:text-white bg-primary-200 mt-0 py-5`}
+        } px-3 rounded-2xl w-full  bg-gray-200 mt-0 py-3`}
         {...props}
       >
         {!value && <option value={""}>{placeholder}</option>}

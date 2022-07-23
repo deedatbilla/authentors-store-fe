@@ -9,7 +9,8 @@ import {
   setEmbedKukai,
 } from "./features/authentication/authentication-reducer";
 import Home from "./features/home/home-container";
-
+import Profile from "./features/profile/profile-container";
+import Footer from "./layouts/footer";
 function Routes() {
   const dispatch = useDispatch();
   const embedKukai = useSelector(getEmbedKukai);
@@ -33,9 +34,10 @@ function Routes() {
         {/* <Route path="/register" component={SellLand} />
         <Route path="/land/:id" component={LandDetails} />
         <Route path="/my-lands" component={MyLands} /> */}
-
+        <Route path="/profile" component={Profile} />
         <Route path="/" component={Home} />
       </Switch>
+      <Footer />
     </Router>
   );
 }

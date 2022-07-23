@@ -23,7 +23,6 @@ function* handleLogin() {
     const response = yield call([embedKukai, "login"]);
     yield put(setAuth({ ...response }));
     yield put(setSuccess(true));
-
     yield put(setLoading(false));
   } catch (error) {
     yield put(setLoading(false));

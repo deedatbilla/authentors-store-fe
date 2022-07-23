@@ -13,7 +13,7 @@ function InputWithIcon({
 
   ...props
 }) {
-  // const ring = error ? `ring-1 ring-secondary` : "";
+
   return (
     <div className="flex flex-col my-1">
       <p className="text-sm text-dark ml-2 dark:text-white">{label}</p>
@@ -21,7 +21,7 @@ function InputWithIcon({
         autoComplete="off"
         className={`${className} ${
           error ? "ring-1 ring-red" : ""
-        } text-dark dark:text-white rounded-16 bg-primary-200 dark:bg-primary-800 mt-0 px-3 py-4`}
+        } text-dark dark:text-white rounded-2xl bg-gray-200  mt-0 p-3`}
         type={type}
         placeholder={placeholder}
         disabled={disabled}

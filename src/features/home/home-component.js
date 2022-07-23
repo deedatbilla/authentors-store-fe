@@ -7,15 +7,16 @@ import nft4 from "../../assets/img/nft4.webp";
 import client1 from "../../assets/img/client1.webp";
 import client2 from "../../assets/img/client2.webp";
 import client3 from "../../assets/img/client3.webp";
-import Footer from "../../layouts/footer";
 import ModalBox from "../../components/Modals/ModalBox";
 import ProfielForm from "../../components/forms/profile-form";
+import Spinner from "../../components/spinner";
 const data = [{}];
 function HomeComponent({
   handleLogin,
   handleOpenModal,
   handleCloseModal,
   openModal,
+  loading
 }) {
   const settings = {
     dots: true,
@@ -61,7 +62,10 @@ function HomeComponent({
             share privately or Publicly
           </p>
           <div className="flex items-center space-x-3">
-            <button className=" bg-blue-500 px-4 py-2 rounded-lg text-white font-bold">
+            <button
+              onClick={handleLogin}
+              className=" bg-blue-500 px-4 py-2 rounded-lg text-white font-bold"
+            >
               SIGN UP
             </button>
             <p className=" text-xl opacity-40">Learn more</p>
@@ -292,11 +296,12 @@ function HomeComponent({
           </div>
         </div>
       </div>
+
+      <Spinner loading={loading} />
       <ModalBox
         open={openModal}
         content={<ProfielForm handleCloseModal={handleCloseModal} />}
       />
-      <Footer />
     </div>
   );
 }
