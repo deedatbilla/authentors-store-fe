@@ -3,13 +3,39 @@ import ProfileComponent from "./profile-component";
 import { connect } from "react-redux";
 import { compose } from "@reduxjs/toolkit";
 import { getAuth } from "../authentication/authentication-reducer";
+import { updateUserProfile } from "./profile-saga";
+import { getLoading } from "./profile-reducer";
 const mapStateToProps = (state) => ({
   user: getAuth(state),
+  loading: getLoading(state),
 });
-
-const ProfileContainer = compose(connect(mapStateToProps, {}))(({ user }) => {
+const ProfileContainer = compose(
+  connect(mapStateToProps, { updateUserProfile })
+)(({ user, updateUserProfile, loading }) => {
   const tabs = ["Profile", "Certificates"];
   const [activeTab, setActiveTab] = useState("Profile");
+  const [values, setValues] = useState({
+    fullName: "",
+    email: user?.userData?.email,
+    phoneNumber: "",
+    facebook: "",
+    twitter: "",
+    instagram: "",
+    country: "",
+    bio: "",
+    linkedin: "",
+    location: "",
+  });
+  const onChange = (e) => {
+    setValues({
+      ...values,
+      [e.target.name]: e.target.value,
+    });
+  };
+  const onSubmit = (e) => {
+    e.preventDefault();
+    updateUserProfile(values);
+  };
   const [openModal, setOPenModal] = useState(false);
   const handleOpenModal = () => {
     setOPenModal(true);
@@ -20,7 +46,6 @@ const ProfileContainer = compose(connect(mapStateToProps, {}))(({ user }) => {
   const handleChangeTab = (tab) => {
     setActiveTab(tab);
   };
-  console.log(user,"here")
   return (
     <ProfileComponent
       handleChangeTab={handleChangeTab}
@@ -30,6 +55,10 @@ const ProfileContainer = compose(connect(mapStateToProps, {}))(({ user }) => {
       openModal={openModal}
       handleOpenModal={handleOpenModal}
       handleCloseModal={handleCloseModal}
+      onChange={onChange}
+      values={values}
+      onSubmit={onSubmit}
+      loading={loading}
     />
   );
 });

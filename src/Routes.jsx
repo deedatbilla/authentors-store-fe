@@ -4,13 +4,19 @@ import { useSelector } from "react-redux";
 import { useDispatch } from "react-redux";
 import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
 import NavHeader from "./components/headers/nav-header";
+import Spinner from "./components/spinner";
 import {
   getEmbedKukai,
+  setAuth,
   setEmbedKukai,
+  setLoading,
 } from "./features/authentication/authentication-reducer";
-import Home from "./features/home/home-container";
-import Profile from "./features/profile/profile-container";
+import { PublicRoute, PrivateRoute } from "./helpers";
 import Footer from "./layouts/footer";
+const Home = React.lazy(() => import("./features/home/home-container"));
+const Profile = React.lazy(() =>
+  import("./features/profile/profile-container")
+);
 function Routes() {
   const dispatch = useDispatch();
   const embedKukai = useSelector(getEmbedKukai);
@@ -22,22 +28,39 @@ function Routes() {
           new KukaiEmbed({
             net: "https://ithacanet.kukai.app",
             icon: false,
+            enableLogging: false,
           })
         )
       );
     }
   }, []);
+  useEffect(() => {
+    init();
+  }, [embedKukai, dispatch]);
+
+  const init = async () => {
+    dispatch(setLoading(true));
+    await embedKukai.init();
+    const userData = embedKukai?.user;
+    if (userData) {
+      dispatch(setAuth(userData));
+    }
+    dispatch(setLoading(false));
+  };
   return (
     <Router>
       <NavHeader />
-      <Switch>
-        {/* <Route path="/register" component={SellLand} />
-        <Route path="/land/:id" component={LandDetails} />
-        <Route path="/my-lands" component={MyLands} /> */}
-        <Route path="/profile" component={Profile} />
-        <Route path="/" component={Home} />
-      </Switch>
-      <Footer />
+      <React.Suspense fallback={<Spinner loading={true} />}>
+        <Switch>
+          <PrivateRoute
+            restricted={false}
+            path="/profile"
+            component={Profile}
+          />
+          <PublicRoute restricted={false} path="/" component={Home} />
+        </Switch>
+        <Footer />
+      </React.Suspense>
     </Router>
   );
 }

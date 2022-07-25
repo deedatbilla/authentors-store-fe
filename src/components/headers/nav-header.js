@@ -1,12 +1,13 @@
 import { Avatar } from "@material-ui/core";
 import React from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import logo from "../../assets/img/authentors.webp";
 import { getAuth } from "../../features/authentication/authentication-reducer";
+import { signOut } from "../../features/authentication/authentication-saga";
 function NavHeader() {
   const user = useSelector(getAuth);
-  console.log(user);
+  const dispatch = useDispatch();
   return (
     <div className=" flex items-center   px-10 py-4 shadow-lg w-full sticky top-0 bg-white z-50">
       <Link to={"/"}>
@@ -36,9 +37,12 @@ function NavHeader() {
           <p>Contact us</p>
         </Link>
         {user && (
-          <Link to="/profile">
-            <Avatar />
-          </Link>
+          <div className="flex items-center space-x-3">
+            <Link to="/profile">
+              <Avatar />
+            </Link>
+            <button onClick={() => dispatch(signOut())}>Logout</button>
+          </div>
         )}
       </div>
     </div>

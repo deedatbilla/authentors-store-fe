@@ -2,8 +2,11 @@ import { Avatar, makeStyles } from "@material-ui/core";
 import { FileCopy } from "@material-ui/icons";
 import React from "react";
 import UploadCertificateForm from "../../components/forms/upload-certificate-form";
+import DropDownComponent from "../../components/InputFields/DropDownComponent";
 import InputWithIcon from "../../components/InputFields/InputWithIcon";
 import ModalBox from "../../components/Modals/ModalBox";
+import Spinner from "../../components/spinner";
+import { countries } from "../../data/countries";
 const useStyles = makeStyles((theme) => ({
   large: {
     width: theme.spacing(20),
@@ -18,6 +21,10 @@ function ProfileComponent({
   handleOpenModal,
   handleCloseModal,
   openModal,
+  onChange,
+  values,
+  onSubmit,
+  loading
 }) {
   const classes = useStyles();
   const renderView = () => {
@@ -25,16 +32,16 @@ function ProfileComponent({
       case "Profile":
         return (
           <div className="py-4 px-6">
-            <form>
+            <form onSubmit={onSubmit}>
               <div className=" grid grid-cols-2 gap-4">
                 <div>
                   <InputWithIcon
                     placeholder="Full name"
                     className=""
-                    required
+                    onChange={onChange}
+                    name="fullName"
+                   
                     type="text"
-                    //   error={!withdrawalAmount === wallets.find((w) => w.currency === "USD").balance}
-                    //   onChange={onChange}
                     label="Full name"
                   />
                 </div>
@@ -43,10 +50,12 @@ function ProfileComponent({
                   <InputWithIcon
                     placeholder="Email"
                     className=""
-                    required
+                    
+                    disabled
+                    value={values?.email}
+                    name="email"
                     type="email"
-                    //   error={!withdrawalAmount === wallets.find((w) => w.currency === "USD").balance}
-                    //   onChange={onChange}
+                    onChange={onChange}
                     label="Email"
                   />
                 </div>
@@ -55,10 +64,10 @@ function ProfileComponent({
                   <InputWithIcon
                     placeholder="Phone"
                     className=""
-                    required
-                    type="email"
-                    //   error={!withdrawalAmount === wallets.find((w) => w.currency === "USD").balance}
-                    //   onChange={onChange}
+                    
+                    name="phoneNumber"
+                    type="text"
+                    onChange={onChange}
                     label="Phone"
                   />
                 </div>
@@ -67,10 +76,10 @@ function ProfileComponent({
                   <InputWithIcon
                     placeholder="Bio"
                     className=""
-                    required
-                    type="email"
-                    //   error={!withdrawalAmount === wallets.find((w) => w.currency === "USD").balance}
-                    //   onChange={onChange}
+                    
+                    name="bio"
+                    type="text"
+                    onChange={onChange}
                     label="Bio"
                   />
                 </div>
@@ -79,10 +88,10 @@ function ProfileComponent({
                   <InputWithIcon
                     placeholder="Location"
                     className=""
-                    required
-                    type="email"
-                    //   error={!withdrawalAmount === wallets.find((w) => w.currency === "USD").balance}
-                    //   onChange={onChange}
+                    
+                    type="text"
+                    name="location"
+                    onChange={onChange}
                     label="Location"
                   />
                 </div>
@@ -90,20 +99,69 @@ function ProfileComponent({
                   <InputWithIcon
                     placeholder="Twitter profile"
                     className=""
-                    required
-                    type="email"
-                    //   error={!withdrawalAmount === wallets.find((w) => w.currency === "USD").balance}
-                    //   onChange={onChange}
+                    
+                    type="text"
+                    name="twitter"
+                    onChange={onChange}
                     label="Twitter profile"
+                  />
+                </div>
+
+                <div>
+                  <InputWithIcon
+                    placeholder="Instagram profile"
+                    className=""
+                    name="instagram"
+                    
+                    type="text"
+                    onChange={onChange}
+                    label="Instagram profile"
+                  />
+                </div>
+
+                <div>
+                  <InputWithIcon
+                    placeholder="Facebook profile"
+                    className=""
+                   
+                    name="facebook"
+                    type="text"
+                    onChange={onChange}
+                    label="Facebook profile"
+                  />
+                </div>
+
+                <div>
+                  <InputWithIcon
+                    placeholder="LinkedIn profile"
+                    className=""
+                   
+                    name="linkedin"
+                    type="text"
+                    onChange={onChange}
+                    label="Facebook profile"
+                  />
+                </div>
+
+                <div>
+                  <DropDownComponent
+                    name="country"
+                    onChange={onChange}
+                    placeholder="Select your country"
+                    label="Country of issue"
+                    items={countries.map((item) => ({
+                      key: item.label,
+                      value: item.label,
+                    }))}
                   />
                 </div>
               </div>
               <div className="grid grid-cols-12 gap-4 my-6">
                 <button
                   type="submit"
-                  className="hover:bg-secondary-800 col-span-9 bg-black items-center  py-3 rounded-16"
+                  className="hover:bg-secondary-800  bg-black items-center  py-3 rounded-16"
                 >
-                  <p className=" font-semibold text-xs text-white">Continue</p>
+                  <p className=" font-semibold text-xs text-white">Update</p>
                 </button>
               </div>
             </form>
@@ -112,7 +170,9 @@ function ProfileComponent({
       case "Certificates":
         return (
           <div className="flex items-center justify-center flex-col h-full py-16">
-            <p className="text-3xl">No Nft Certificates in your collection yet</p>
+            <p className="text-3xl">
+              No Nft Certificates in your collection yet
+            </p>
             <button onClick={handleOpenModal} className="text-blue-400">
               Click here to upload your certificate
             </button>
@@ -166,6 +226,7 @@ function ProfileComponent({
 
         {renderView()}
       </div>
+      <Spinner loading={loading} />
       <ModalBox
         open={openModal}
         content={<UploadCertificateForm handleCloseModal={handleCloseModal} />}

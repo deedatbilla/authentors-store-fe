@@ -17,7 +17,7 @@ import storage from "./storage.js";
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["auth"],
+  whitelist: ["profile"],
 };
 
 const middleware = getDefaultMiddleware({
@@ -25,7 +25,7 @@ const middleware = getDefaultMiddleware({
   // serializableCheck: {
   //   ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
   // },
-  serializableCheck: false
+  serializableCheck: false,
 });
 
 // if (process.env.NODE_ENV === `development`) {

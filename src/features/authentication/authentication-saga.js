@@ -7,6 +7,10 @@ import {
   setSuccess,
 } from "./authentication-reducer";
 import { clear } from "../../redux/clear";
+import { history } from "../../helpers/browser";
+import { AxiosHostNoHeaders } from "../../helpers/axios-global";
+import { setProfile } from "../profile/profile-reducer";
+import toast from "react-hot-toast";
 
 function* handleLogin() {
   try {
@@ -14,19 +18,29 @@ function* handleLogin() {
     yield put(setSuccess(false));
     yield put(setError(""));
     const embedKukai = yield select(getEmbedKukai);
-    console.log("first", embedKukai.initialized);
     if (!embedKukai.initialized) {
       yield call([embedKukai, "init"]);
-      // await embedKukai.init();
     }
-  //  yield call([embedKukai, "logout"]);
     const response = yield call([embedKukai, "login"]);
+    const payload = {
+      email: response.userData.email,
+      userType: "holder",
+      address: response.pkh,
+      privateKey: response.pk,
+      profilePicture: response?.userData?.profileImage,
+    };
+    const path = "/auth";
+    const { data } = yield call([AxiosHostNoHeaders, "post"], path, payload);
+    yield put(setProfile(data?.data));
     yield put(setAuth({ ...response }));
     yield put(setSuccess(true));
     yield put(setLoading(false));
+    yield call([localStorage, localStorage.setItem], "token", data?.data.token);
+    toast.success("Login successful")
+    // yield call([history, history.push], "/profile");
   } catch (error) {
     yield put(setLoading(false));
-    console.log(error);
+    console.log(error.response);
   }
 }
 
@@ -39,6 +53,9 @@ function* watchLogin() {
 
 function* handleSignOut() {
   yield put(clear());
+  const embedKukai = yield select(getEmbedKukai);
+  yield call([embedKukai, "logout"]);
+  yield put(setAuth(null));
 }
 
 const signOut = (payload) => ({ type: signOut.type, payload });

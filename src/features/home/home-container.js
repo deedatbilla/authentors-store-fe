@@ -20,24 +20,23 @@ const HomeContainer = compose(
   })
 )(({ loading, embedKukai, login, success }) => {
   const [openModal, setOPenModal] = useState(false);
+
+  const [values,setValues]=useState({
+    email:"",
+    name:"",
+    
+
+  })
   const handleOpenModal = () => {
     setOPenModal(true);
   };
   const handleCloseModal = () => {
     setOPenModal(false);
   };
-const payload={
-    token:"",
-    userType:"",
-    pk:"",
-    pkh:"",
-    email:"",
-    name:"",
-    profileImg:""
-}
+
   useEffect(() => {
     if (success) {
-      handleOpenModal();
+      
     }
   }, [success]);
 
