@@ -24,7 +24,10 @@ function ProfileComponent({
   onChange,
   values,
   onSubmit,
-  loading
+  loading,
+  onChangeCertificateValues,
+  certificateValues,
+  onSubmitCertificate
 }) {
   const classes = useStyles();
   const renderView = () => {
@@ -40,7 +43,6 @@ function ProfileComponent({
                     className=""
                     onChange={onChange}
                     name="fullName"
-                   
                     type="text"
                     label="Full name"
                   />
@@ -50,7 +52,6 @@ function ProfileComponent({
                   <InputWithIcon
                     placeholder="Email"
                     className=""
-                    
                     disabled
                     value={values?.email}
                     name="email"
@@ -64,7 +65,6 @@ function ProfileComponent({
                   <InputWithIcon
                     placeholder="Phone"
                     className=""
-                    
                     name="phoneNumber"
                     type="text"
                     onChange={onChange}
@@ -76,7 +76,6 @@ function ProfileComponent({
                   <InputWithIcon
                     placeholder="Bio"
                     className=""
-                    
                     name="bio"
                     type="text"
                     onChange={onChange}
@@ -88,7 +87,6 @@ function ProfileComponent({
                   <InputWithIcon
                     placeholder="Location"
                     className=""
-                    
                     type="text"
                     name="location"
                     onChange={onChange}
@@ -99,7 +97,6 @@ function ProfileComponent({
                   <InputWithIcon
                     placeholder="Twitter profile"
                     className=""
-                    
                     type="text"
                     name="twitter"
                     onChange={onChange}
@@ -112,7 +109,6 @@ function ProfileComponent({
                     placeholder="Instagram profile"
                     className=""
                     name="instagram"
-                    
                     type="text"
                     onChange={onChange}
                     label="Instagram profile"
@@ -123,7 +119,6 @@ function ProfileComponent({
                   <InputWithIcon
                     placeholder="Facebook profile"
                     className=""
-                   
                     name="facebook"
                     type="text"
                     onChange={onChange}
@@ -135,7 +130,6 @@ function ProfileComponent({
                   <InputWithIcon
                     placeholder="LinkedIn profile"
                     className=""
-                   
                     name="linkedin"
                     type="text"
                     onChange={onChange}
@@ -229,7 +223,14 @@ function ProfileComponent({
       <Spinner loading={loading} />
       <ModalBox
         open={openModal}
-        content={<UploadCertificateForm handleCloseModal={handleCloseModal} />}
+        content={
+          <UploadCertificateForm
+            onChange={onChangeCertificateValues}
+            handleCloseModal={handleCloseModal}
+            values={certificateValues}
+            onSubmit={onSubmitCertificate}
+          />
+        }
       />
     </div>
   );

@@ -3,18 +3,23 @@ import ModalFormLayout from "../../layouts/modal-form-layout";
 import InputWithIcon from "../InputFields/InputWithIcon";
 import DropDownComponent from "../InputFields/DropDownComponent";
 import { countries } from "../../data/countries";
-function UploadCertificateForm({ handleCloseModal }) {
+function UploadCertificateForm({
+  handleCloseModal,
+  onChange,
+  values,
+  onSubmit,
+}) {
   return (
     <ModalFormLayout title={"Upload your certificate"}>
       <div className="py-4 px-6">
-        <form>
+        <form onSubmit={onSubmit}>
           <div>
             <DropDownComponent
               name="country"
-              // onChange={handleChange}
-              // onBlur={handleBlur}
+              onChange={onChange}
               placeholder="Select your country"
               label="Country of issue"
+              value={values.country}
               items={countries.map((item) => ({
                 key: item.label,
                 value: item.label,
@@ -27,9 +32,10 @@ function UploadCertificateForm({ handleCloseModal }) {
               placeholder="College Name Name"
               className=""
               required
+              value={values.college}
+              name="college"
               type="text"
-              //   error={!withdrawalAmount === wallets.find((w) => w.currency === "USD").balance}
-              //   onChange={onChange}
+              onChange={onChange}
               label="College Name Name"
             />
           </div>
@@ -38,10 +44,11 @@ function UploadCertificateForm({ handleCloseModal }) {
             <InputWithIcon
               placeholder="Degree or course name"
               className=""
+              name="course"
+              value={values.course}
               required
               type="text"
-              //   error={!withdrawalAmount === wallets.find((w) => w.currency === "USD").balance}
-              //   onChange={onChange}
+              onChange={onChange}
               label="Degree or course name"
             />
           </div>
@@ -50,10 +57,11 @@ function UploadCertificateForm({ handleCloseModal }) {
             <InputWithIcon
               placeholder="Description of certificate"
               className=""
+              name="description"
+              value={values.description}
               required
               type="text"
-              //   error={!withdrawalAmount === wallets.find((w) => w.currency === "USD").balance}
-              //   onChange={onChange}
+              onChange={onChange}
               label="Description of certificate"
             />
           </div>
@@ -64,8 +72,8 @@ function UploadCertificateForm({ handleCloseModal }) {
               className=""
               required
               type="file"
-              //   error={!withdrawalAmount === wallets.find((w) => w.currency === "USD").balance}
-              //   onChange={onChange}
+              name="file"
+              onChange={onChange}
               label="Select certificate file"
             />
             <p className="text-xs text-blue-500 mt-3">
