@@ -16,7 +16,7 @@ function HomeComponent({
   handleOpenModal,
   handleCloseModal,
   openModal,
-  loading
+  loading,
 }) {
   const settings = {
     dots: true,
@@ -37,7 +37,7 @@ function HomeComponent({
         </p>
       </div>
 
-      <div className="py-12 px-16 flex items-center justify-between">
+      <div className="py-12 md:px-16 px-2 flex items-center justify-between md:mx-auto max-w-screen-lg md:flex-row flex-col">
         <div className="flex flex-col space-y-3 max-w-lg">
           <p className="font-bold text-4xl">Educator Solution</p>
           <p>
@@ -72,31 +72,46 @@ function HomeComponent({
           </div>
         </div>
       </div>
+      <div className="bg-white ">
+        <div className="py-12 md:mx-auto max-w-screen-lg">
+          <p className="text-center text-5xl font-bold">
+            Latest NFT Certificates Minted
+          </p>
 
-      <div className="bg-white py-12">
-        <p className="text-center text-5xl font-bold">
-          Latest NFT Certificates Minted
-        </p>
-
-        <Slider {...settings}>
-          <img width={120} src={nft1} alt="cert" />
-          <img width={120} src={nft2} alt="cert" />
-          <img width={120} src={nft3} alt="cert" />
-          <img width={120} src={nft4} alt="cert" />
-        </Slider>
-      </div>
-
-      <div className="bg-white py-12 px-12">
-        <p className="text-center text-5xl font-bold">Our Clients</p>
-
-        <div className="grid grid-cols-3 gap-2">
-          <img src={client1} alt="cert" />
-          <img src={client2} alt="cert" />
-          <img src={client3} alt="cert" />
+          <Slider {...settings}>
+            <img width={120} src={nft1} alt="cert" />
+            <img width={120} src={nft2} alt="cert" />
+            <img width={120} src={nft3} alt="cert" />
+            <img width={120} src={nft4} alt="cert" />
+          </Slider>
         </div>
       </div>
 
-      <div className="bg-gray-100 mx-12 py-12" id="why">
+      <div className="bg-white ">
+        <div className="bg-white py-12 px-12 md:mx-auto max-w-screen-lg">
+          <p className="text-center text-5xl font-bold">Our Clients</p>
+
+          <div className="grid grid-cols-3 gap-2">
+            <a target="blank" rel="no-referer" href="https://authentors-collections.web.app/store?collection=CPA+Union+of+Israel&address=tz1ZXvvKgCDkfsjeVjaU5Y2EFFzGz7PXtQwz&limit=2000">
+              {" "}
+              <img src={client1} alt="cert" />
+            </a>
+            <a target="blank" rel="no-referer" href="https://authentors-collections.web.app/store?collection=MBA%20Class%20Certificates&address=tz1a395j1eoxjSL81HRW6EbU7YPc57Ve8dFq&limit=2000">
+              {" "}
+              <img src={client2} alt="cert" />
+            </a>
+            <a target="blank" rel="no-referer" href="https://authentors-collections.web.app/store?collection=ATHENA+Certificates&address=tz1ZXvvKgCDkfsjeVjaU5Y2EFFzGz7PXtQwz&limit=2000">
+              {" "}
+              <img src={client3} alt="cert" />
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="bg-gray-100 mx-12 py-12 md:mx-auto max-w-screen-lg"
+        id="why"
+      >
         <p className="text-left text-4xl font-bold">Why Authentors?</p>
         <div className="flex flex-col space-y-6 mt-4">
           <p className="">
@@ -131,7 +146,7 @@ function HomeComponent({
         </div>
       </div>
 
-      <div className=" px-12 py-12" id="graduate">
+      <div className=" px-12 py-12 md:mx-auto max-w-screen-2xl" id="graduate">
         <div className="grid grid-cols-2 gap-2 items-center">
           <div>
             <img src="/img/hat.webp" alt="d" className="w-full" />
@@ -205,7 +220,7 @@ function HomeComponent({
         </div>
       </div>
 
-      <div className="px-12 py-8" id="learn">
+      <div className="px-12 py-8 md:mx-auto max-w-screen-2xl" id="learn">
         <div className="grid grid-cols-12 gap-3 items-center">
           <div className=" bg-gray-200 col-span-8 space-y-7 flex flex-col py-5 px-3">
             <p className="text-3xl font-bold">Educator Solution</p>
@@ -246,7 +261,7 @@ function HomeComponent({
         </div>
       </div>
 
-      <div className="px-12 py-10">
+      <div className="px-12 py-10 md:mx-auto max-w-screen-2xl" id="aboutUs">
         <p className="text-5xl font-bold text-center">About Us</p>
         <div className="grid grid-cols-12 gap-5 mt-6 ">
           <div className=" col-span-8 flex flex-col space-y-6 mt-6">

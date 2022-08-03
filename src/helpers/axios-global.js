@@ -10,7 +10,6 @@ export const $AuthHeader = {
 export const AxiosHost = axios.create({
   baseURL: $API_HOST,
   headers: $AuthHeader,
-  withCredentials:true
 });
 export const AxiosHostNoHeaders = axios.create({
   baseURL: $API_HOST,
