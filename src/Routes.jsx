@@ -17,6 +17,7 @@ const Home = React.lazy(() => import("./features/home/home-container"));
 const Profile = React.lazy(() =>
   import("./features/profile/profile-container")
 );
+const MintPage = React.lazy(() => import("./features/mint/mint-container"));
 function Routes() {
   const dispatch = useDispatch();
   const embedKukai = useSelector(getEmbedKukai);
@@ -36,16 +37,20 @@ function Routes() {
   }, []);
   useEffect(() => {
     init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [embedKukai, dispatch]);
 
   const init = async () => {
-    dispatch(setLoading(true));
-    await embedKukai.init();
-    const userData = embedKukai?.user;
-    if (userData) {
-      dispatch(setAuth(userData));
+    if (!embedKukai) {
+      dispatch(setLoading(true));
+
+      await embedKukai?.init();
+      const userData = embedKukai?.user;
+      if (userData) {
+        dispatch(setAuth(userData));
+      }
+      dispatch(setLoading(false));
     }
-    dispatch(setLoading(false));
   };
   return (
     <Router>
@@ -57,6 +62,7 @@ function Routes() {
             path="/profile"
             component={Profile}
           />
+          <PublicRoute restricted={false} path="/mint" component={MintPage} />
           <PublicRoute restricted={false} path="/" component={Home} />
         </Switch>
         <Footer />

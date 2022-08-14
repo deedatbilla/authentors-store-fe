@@ -1,0 +1,971 @@
+/* eslint-disable no-underscore-dangle */
+/* eslint-disable no-await-in-loop */
+/* eslint-disable max-len */
+import React from 'react';
+import { BeaconWallet } from '@taquito/beacon-wallet';
+import { TezosToolkit, OpKind, MichelsonMap } from '@taquito/taquito';
+import { Parser } from '@taquito/michel-codec';
+import { Schema } from '@taquito/michelson-encoder';
+import axios from 'axios';
+import eztz from 'eztz-lib';
+import { sumBy } from 'lodash';
+import { RequestSignPayloadInput, SigningType } from '@airgap/beacon-sdk';
+import HicetnuncContext, { MintInput, SwapInput } from './__Context';
+import { DIVIDER } from '~/utils/const';
+import { ADDRESSES } from '~/utils/addresses';
+import { getUserByAddress, getSignatureBytesFromNonce } from '~/utils/auth';
+import { fuego } from '~/lib/fuego';
+
+const getItem = (prop) => JSON.parse(localStorage.getItem(prop));
+
+const setItem = (prop, value) => {
+  localStorage.setItem(prop, JSON.stringify(value));
+  return getItem(prop);
+};
+
+// TODO: move this schema into separate place?
+const createProxySchema = `
+  (map address (pair (bool %isCore) (nat %share))))
+`;
+
+const gateways = [
+  'https://api.tez.ie/rpc/mainnet',
+  'https://mainnet-tezos.giganode.io',
+  'https://mainnet.smartpy.io',
+];
+
+export const Tezos = new TezosToolkit(gateways[2]);
+
+const wallet = new BeaconWallet({
+  name: 'HIC.AF',
+  // @ts-ignore
+  preferredNetwork: 'mainnet',
+});
+
+Tezos.setWalletProvider(wallet);
+
+const HicetnuncContextProvider = ({ children }) => {
+  const editState = (value) => setState((s) => ({ ...s, ...value }));
+  const [state, setState] = React.useState({
+    ...ADDRESSES,
+    commission: 0,
+    setCommission: (commission) => editState({ commission }),
+    donate: (amount) => Tezos.wallet.transfer({ to: ADDRESSES.hicaf, amount: +amount }).send(),
+    subjktInfo: {},
+    setSubjktInfo: (subjkt) => editState({ subjktInfo: subjkt }),
+    collect_hdao: async (from, swap_id) => {
+      const hDAO = await Tezos.wallet.at(ADDRESSES.hDAO);
+      const marketplace = await Tezos.wallet.at(ADDRESSES.hDAO_marketplace);
+
+      const list = [
+        {
+          kind: OpKind.TRANSACTION,
+          ...hDAO.methods.update_operators([{ add_operator: { operator: ADDRESSES.hDAO_marketplace, token_id: 0, owner: from } }]).toTransferParams({ amount: 0, mutez: true, storageLimit: 150 }),
+        },
+        {
+          kind: OpKind.TRANSACTION,
+          ...marketplace.methods.collect(swap_id).toTransferParams({ amount: 0, mutez: true, storageLimit: 250 }),
+        },
+      ];
+
+      // @ts-ignore
+      const batch = await Tezos.wallet.batch(list);
+      return batch.send();
+    },
+
+    swap_hDAO: async (from, royalties, token_per_objkt, objkt_id, creator, objkt_amount) => {
+      const objkts = await Tezos.wallet.at(ADDRESSES.objkts);
+      const marketplace = await Tezos.wallet.at(ADDRESSES.hDAO_marketplace);
+      console.log(from, objkt_id);
+      const list = [
+        {
+          kind: OpKind.TRANSACTION,
+          ...objkts.methods.update_operators([{ add_operator: { operator: ADDRESSES.hDAO_marketplace, token_id: parseFloat(objkt_id), owner: from } }]).toTransferParams({ amount: 0, mutez: true, storageLimit: 150 }),
+        },
+        {
+          kind: OpKind.TRANSACTION,
+          ...marketplace.methods.swap(ADDRESSES.hDAO_marketplace, creator, parseFloat(objkt_amount), parseFloat(objkt_id), parseFloat(royalties), 0, parseFloat(token_per_objkt)).toTransferParams({ amount: 0, mutez: true, storageLimit: 250 }),
+        },
+      ];
+
+      // @ts-ignore
+      const batch = await Tezos.wallet.batch(list);
+      return batch.send();
+    },
+    // marketplace v2
+
+    collectv2: async (swap_id, xtz_amount) => Tezos.wallet
+      .at(ADDRESSES.v2)
+      .then((c) => c.methods
+        .collect(parseFloat(swap_id))
+        .send({
+          amount: parseFloat(xtz_amount),
+          mutez: true,
+          storageLimit: 310,
+        })),
+
+    swapv2: async (from, royalties, xtz_per_objkt, objkt_id, creator, objkt_amount) => {
+      // If using proxy: both calls are made through state.proxyAddress:
+      const objktsAddress = state.proxyAddress || ADDRESSES.objkts;
+      const marketplaceAddress = state.proxyAddress || ADDRESSES.v2;
+      const ownerAddress = state.proxyAddress || from;
+
+      const objkts = await Tezos.wallet.at(objktsAddress);
+      const marketplace = await Tezos.wallet.at(marketplaceAddress);
+
+      const list = [
+        {
+          kind: OpKind.TRANSACTION,
+          ...objkts.methods
+            .update_operators(
+              [
+                {
+                  add_operator: {
+                    operator: ADDRESSES.v2,
+                    token_id: parseFloat(objkt_id),
+                    owner: ownerAddress,
+                  },
+                },
+              ],
+            )
+            .toTransferParams({ amount: 0, mutez: true, storageLimit: 100 }),
+        },
+        {
+          kind: OpKind.TRANSACTION,
+          ...marketplace.methods
+            .swap(
+              creator,
+              parseFloat(objkt_amount),
+              parseFloat(objkt_id),
+              parseFloat(royalties),
+              parseFloat(xtz_per_objkt),
+            )
+            .toTransferParams({ amount: 0, mutez: true, storageLimit: 270 }),
+        },
+        {
+          kind: OpKind.TRANSACTION,
+          ...objkts.methods
+            .update_operators(
+              [
+                {
+                  remove_operator: {
+                    operator: ADDRESSES.v2,
+                    token_id: parseFloat(objkt_id),
+                    owner: ownerAddress,
+                  },
+                },
+              ],
+            )
+            .toTransferParams({ amount: 0, mutez: true, storageLimit: 100 }),
+        },
+      ];
+
+      // @ts-ignore
+      const batch = await Tezos.wallet.batch(list);
+      return batch.send();
+    },
+
+    /*
+        batch_cancel: async (arr) => {
+            console.log(arr)
+            let v1 = await Tezos.wallet.at(ADDRESSES.v1)
+            const batch = await arr
+                .map((e) => parseInt(e.id))
+                .reduce((batch, id) => {
+                    return batch.withContractCall(v1.methods.cancel_swap(id))
+                }, Tezos.wallet.batch())
+            console.log(arr)
+            return await batch.send()
+        },
+        */
+
+    // fullscreen. DO NOT CHANGE!
+    fullscreen: false,
+    setFullscreen: (fullscreen) => editState({ fullscreen }),
+
+    // theme, DO NO CHANGE!
+    theme: 'light',
+    setTheme: (theme) => {
+      const root = document.documentElement;
+
+      const light = theme === 'light';
+
+      setItem('theme', light ? 'light' : 'dark');
+
+      root.style.setProperty(
+        '--background-color',
+        light ? '#ffffff' : '#111111',
+      );
+      root.style.setProperty('--text-color', light ? '#000000' : '#dedede');
+      root.style.setProperty(
+        '--border-color',
+        light ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.3)',
+      );
+      root.style.setProperty(
+        '--shadow-color',
+        light ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.3)',
+      );
+
+      editState({ theme });
+    },
+
+    // --------------------
+    // feedback component
+    // --------------------
+    feedback: {
+      visible: false, // show or hide the component
+      message: 'OBJKT minted', // what message to display?
+      progress: true, // do we need to display a progress indicator?
+      confirm: true, // do we display a confirm button?
+      confirmCallback: () => null, // any function to run when the user clicks confirm
+    },
+
+    setFeedback: (props) => editState({ feedback: { ...state.feedback, ...props } }),
+
+    // --------------------
+    // feedback component end
+    // --------------------
+    pathname: '',
+
+    address: '',
+
+    op: undefined,
+
+    contract: '',
+
+    setAddress: (address) => editState({ address }),
+
+    setAuth: (address) => {
+      localStorage.setItem('auth', address);
+    },
+
+    updateLs: (key, value) => {
+      localStorage.setItem(key, value);
+    },
+
+    getLs: (key) => localStorage.getItem(key),
+
+    getAuth: () => localStorage.getItem('auth'),
+
+    client: null,
+
+    setClient: (client) => {
+      editState({
+        client,
+      });
+    },
+
+    dAppClient: () => {
+      editState({ client: wallet.client });
+
+      // It doesn't look like this code is called, otherwise the active account should be checked, see below.
+      wallet.client
+        .requestPermissions({
+          network: {
+            // @ts-ignore
+            type: 'mainnet',
+            rpcUrl: 'https://mainnet.smartpy.io',
+          },
+        })
+        .then((permissions) => {
+          editState({
+            address: permissions.address,
+          });
+
+          state.setAuth(permissions.address);
+        })
+        .catch((error) => console.log(error));
+    },
+
+    proxyAddress: null,
+
+    // This will be set after creating a new collab
+    // but we don't want to auto-sign in
+    originatedContract: null,
+
+    setProxyAddress: (proxyAddress) => {
+      // setting proxy updates objkt contract as well:
+      editState({
+        proxyAddress,
+        // objkt: proxyAddress || 'KT1Hkg5qeNhfwpKW4fXvq7HGZB9z2EnmCCA9'
+      });
+    },
+
+    // Do we need this? proxyAddress will push to UI via context
+    getProxy: () => state.proxyAddress,
+
+    objkt: 'KT1Hkg5qeNhfwpKW4fXvq7HGZB9z2EnmCCA9',
+
+    mint: async ({ address, editions, cid, royalties }: MintInput) => {
+      console.log('Minting...', { address, editions, cid, royalties });
+      const contract = await Tezos.wallet.at(state.proxyAddress || ADDRESSES.v1);
+      const hash = (`ipfs://${cid}`)
+        .split('')
+        .reduce(
+          (hex, c_) => hex + c_.charCodeAt(0).toString(16).padStart(2, '0'),
+          '',
+        );
+      return contract.methods.mint_OBJKT(
+        address,
+        +editions,
+        hash,
+        +royalties * 10,
+      )
+        .send({ amount: 0, storageLimit: 310 });
+    },
+
+    batchMint: async (mintInputs: MintInput[] = []) => {
+      const contract = await Tezos.wallet.at(state.proxyAddress || ADDRESSES.v1);
+      const list = mintInputs.map(({ address, editions, cid, royalties }) => {
+        const hash = (`ipfs://${cid}`)
+          .split('')
+          .reduce(
+            (hex, c_) => hex + c_.charCodeAt(0).toString(16).padStart(2, '0'),
+            '',
+          );
+        return {
+          ...contract.methods.mint_OBJKT(
+            address,
+            +editions,
+            hash,
+            +royalties * 10,
+          ).toTransferParams(),
+          kind: OpKind.TRANSACTION,
+          mutez: true,
+          storageLimit: 350,
+        };
+      });
+      // @ts-ignore
+      const batch = await Tezos.wallet.batch(list);
+      return batch.send();
+    },
+
+    collect: async (ops = [], tip = state.commission) => {
+      const marketplaceAddress = state.proxyAddress || ADDRESSES.v2;
+      const marketplace = await Tezos.wallet.at(marketplaceAddress);
+      const list = [
+        ...ops.map(({ swapId, price }) => ({
+          ...marketplace
+            .methods
+            .collect(swapId).toTransferParams(),
+          kind: OpKind.TRANSACTION,
+          amount: price,
+          mutez: true,
+          storageLimit: 350,
+        })),
+        tip > 0 ? {
+          kind: OpKind.TRANSACTION,
+          to: ADDRESSES.hicaf,
+          amount: sumBy(ops, 'price') * tip,
+          mutez: true,
+        } : null,
+      ].filter(Boolean);
+
+      // @ts-ignore
+      const batch = await Tezos.wallet.batch(list);
+      return batch.send();
+    },
+
+    _getSwapList: async ({
+      owner,
+      creator,
+      objktId,
+      objktRoyalties,
+      ops = [],
+    }) => {
+      const objktsAddress = state.proxyAddress || ADDRESSES.objkts;
+      const objkts = await Tezos.wallet.at(objktsAddress);
+      const marketplaceAddress = state.proxyAddress || ADDRESSES.v2;
+      const marketplace = await Tezos.wallet.at(marketplaceAddress);
+      const ownerAddress = state.proxyAddress || owner;
+      const list = [
+        {
+          kind: OpKind.TRANSACTION,
+          ...objkts.methods.update_operators([{
+            add_operator: {
+              operator: ADDRESSES.v2,
+              token_id: parseFloat(objktId),
+              owner: ownerAddress,
+            },
+          }])
+            .toTransferParams({
+              amount: 0,
+              mutez: true,
+              storageLimit: 100,
+            }),
+        },
+        ...ops.map(({ quantity, price }) => ({
+          kind: OpKind.TRANSACTION,
+          ...marketplace.methods.swap(
+            creator,
+            +quantity,
+            +objktId,
+            +objktRoyalties,
+            +price * DIVIDER,
+          ).toTransferParams({
+            amount: 0,
+            mutez: true,
+            storageLimit: 270,
+          }),
+        })),
+        {
+          kind: OpKind.TRANSACTION,
+          ...objkts.methods.update_operators([{
+            remove_operator: {
+              operator: ADDRESSES.v2,
+              token_id: parseFloat(objktId),
+              owner: ownerAddress,
+            },
+          }])
+            .toTransferParams({
+              amount: 0,
+              mutez: true,
+              storageLimit: 175,
+            }),
+        },
+      ];
+      return list;
+    },
+
+    swap: async (data) => {
+      const list = await state._getSwapList(data);
+      // @ts-ignore
+      const batch = await Tezos.wallet.batch(list);
+      return batch.send();
+    },
+
+    batchSwap: async (swapInputs: SwapInput[] = []) => {
+      let list = [];
+      for (let i = 0; i < swapInputs.length; i += 1) {
+        const ops = await state._getSwapList(swapInputs[i]);
+        list = [...list, ...ops];
+      }
+      const batch = await Tezos.wallet.batch(list);
+      return batch.send();
+    },
+
+    editSwap: async (swapId, data) => {
+      const contract = await Tezos.wallet.at(state.proxyAddress || ADDRESSES.v2);
+      const list = [
+        {
+          ...contract.methods.cancel_swap(swapId).toTransferParams(),
+          kind: OpKind.TRANSACTION,
+          mutez: true,
+          storageLimit: 350,
+        },
+        ...(await state._getSwapList(data)),
+      ];
+      // @ts-ignore
+      const batch = await Tezos.wallet.batch(list);
+      return batch.send();
+    },
+
+    batchEdit: async (swapInputs: SwapInput[]) => {
+      const contract = await Tezos.wallet.at(state.proxyAddress || ADDRESSES.v2);
+      let list = [];
+      for (let i = 0; i < swapInputs.length; i += 1) {
+        const swapInput = swapInputs[i];
+        list = [
+          ...list,
+          {
+            ...contract.methods.cancel_swap(swapInput.swapId).toTransferParams(),
+            kind: OpKind.TRANSACTION,
+            mutez: true,
+            storageLimit: 350,
+          },
+          ...(await state._getSwapList(swapInput)),
+        ];
+      }
+      // @ts-ignore
+      const batch = await Tezos.wallet.batch(list);
+      return batch.send();
+    },
+
+    curate: async (objkt_id) => {
+      await axios
+        .get(process.env.REACT_APP_REC_CURATE)
+        .then((res) => res.data.amount)
+        .then((amt) => {
+          Tezos.wallet
+            .at(state.proxyAddress || ADDRESSES.v1)
+            .then((c) => c.methods
+              .curate(
+                localStorage.getItem('hDAO_config') != null
+                  ? parseInt(localStorage.getItem('hDAO_config'), 10)
+                  : amt,
+                objkt_id,
+              )
+              .send());
+        });
+    },
+
+    claim_hDAO: async (hDAO_amount, objkt_id) => {
+      // console.log('claiming', hDAO_amount, objkt_id)
+      await Tezos.wallet
+        .at(ADDRESSES.hDAO_curation)
+        .then((c) => {
+          c.methods
+            .claim_hDAO(parseInt(hDAO_amount, 10), parseInt(objkt_id, 10))
+            .send();
+        });
+    },
+
+    transfer: async ({
+      address,
+      objktId,
+      quantity,
+    }) => {
+      const tz = await wallet.client.getActiveAccount();
+      return Tezos.wallet
+        .at(ADDRESSES.objkts)
+        .then(async (c) => c.methods
+          .transfer([
+            {
+              from_: tz.address,
+              txs: [
+                {
+                  to_: address,
+                  token_id: parseInt(objktId, 10),
+                  amount: parseInt(quantity, 10),
+                },
+              ],
+            },
+          ])
+          .send());
+    },
+
+    burn: async ({
+      objktId,
+      quantity,
+    }) => state.transfer({
+      address: ADDRESSES.burn,
+      objktId,
+      quantity,
+    }),
+
+    batchTransfer: async (transfers = []) => {
+      console.log('About to run.', transfers);
+      const account = await wallet.client.getActiveAccount();
+      const contract = await Tezos.wallet.at(ADDRESSES.objkts);
+      const list = transfers.map(({
+        address,
+        objktId,
+        quantity,
+      }) => ({
+        ...contract.methods.transfer([
+          {
+            from_: account.address,
+            txs: [
+              {
+                to_: address,
+                token_id: +objktId,
+                amount: +quantity,
+              },
+            ],
+          },
+        ]).toTransferParams(),
+        kind: OpKind.TRANSACTION,
+        mutez: true,
+        storageLimit: 350,
+      }));
+      console.log('Running batch transfer.', list);
+      // @ts-ignore
+      const batch = await Tezos.wallet.batch(list);
+      return batch.send();
+    },
+
+    batchBurn: async (transfers) => state.batchTransfer(
+      transfers.map((transfer) => ({
+        ...transfer,
+        address: ADDRESSES.burn,
+      })),
+    ),
+
+    cancelv1: (swap_id) => Tezos.wallet
+      .at(ADDRESSES.v1)
+      .then((c) => c.methods
+        .cancel_swap(parseFloat(swap_id))
+        .send({ amount: 0, storageLimit: 310 }))
+      .catch((e) => e),
+
+    cancel: async (swapId) => {
+      const contract = await Tezos.wallet.at(state.proxyAddress || ADDRESSES.v2);
+      return contract
+        .methods
+        .cancel_swap(parseFloat(swapId))
+        .send({ amount: 0, storageLimit: 310 })
+        .catch((e) => e);
+    },
+
+    batchCancel: async (swapIds) => {
+      const contract = await Tezos.wallet.at(state.proxyAddress || ADDRESSES.v2);
+      const list = swapIds.map((swapId) => ({
+        ...contract.methods.cancel_swap(swapId).toTransferParams(),
+        kind: OpKind.TRANSACTION,
+        mutez: true,
+        storageLimit: 350,
+      }));
+      // @ts-ignore
+      const batch = await Tezos.wallet.batch(list);
+      return batch.send();
+    },
+
+    batch_cancel: async (ids) => {
+      const contract = await Tezos.wallet.at(state.proxyAddress || ADDRESSES.v2);
+      const batch = await ids.reduce((b, id) => b.withContractCall(contract.methods.cancel_swap(+id)), Tezos.wallet.batch());
+      return batch.send();
+    },
+
+    signStr: async (payload) => {
+      const signedPayload = await wallet.client.requestSignPayload(payload);
+      const signature = signedPayload;
+      return eztz.crypto.verify(
+        payload.payload.toString(),
+        signature.signature,
+        await axios.get(
+          `https://tezos-prod.cryptonomic-infra.tech/chains/main/blocks/head/context/contracts/${await wallet.getPKH()}/manager_key`,
+        ),
+      );
+    },
+
+    signIn: async () => {
+      const {
+        address: publicAddress,
+        publicKey,
+      } = await wallet.client.getActiveAccount();
+      // 1. get user from server
+      const user = await getUserByAddress(publicAddress);
+      console.log('Got user to sign.', user);
+      // 2. sign message
+      const payloadBytes = getSignatureBytesFromNonce(user.nonce);
+      const payload: RequestSignPayloadInput = {
+        signingType: SigningType.MICHELINE,
+        payload: payloadBytes,
+        sourceAddress: publicAddress,
+      };
+      console.log('Got payload...', payload);
+      const { signature } = await wallet.client.requestSignPayload(payload);
+      console.log('Got signature...', signature);
+      // 3. verify server-side & generate auth token
+      const body = {
+        signature,
+        publicKey,
+      };
+      console.log('Doing request with body.', body);
+      const { data = {} } = await axios.post('/api/auth', body);
+      console.log('Verified???', data);
+      // 4. login client-side
+      const { customToken } = data;
+      if (customToken) {
+        await fuego.auth().signInWithCustomToken(customToken);
+      }
+      return null;
+    },
+
+    registry: (alias, metadata) => {
+      console.log(metadata);
+      const subjktAddressOrProxy = state.proxyAddress || ADDRESSES.subjkt;
+      return Tezos.wallet.at(subjktAddressOrProxy).then((c) => c.methods
+        .registry(
+          (`ipfs://${metadata.path}`)
+            .split('')
+            .reduce(
+              (hex, c_) => hex + c_.charCodeAt(0).toString(16).padStart(2, '0'),
+              '',
+            ),
+          alias
+            .split('')
+            .reduce(
+              (hex, c_) => hex + c_.charCodeAt(0).toString(16).padStart(2, '0'),
+              '',
+            ),
+        )
+        .send({ amount: 0 }));
+    },
+
+    hDAO_update_operators: (address) => Tezos.wallet.at(ADDRESSES.hDAO).then((c) => c.methods
+      .update_operators([
+        {
+          add_operator: {
+            owner: address,
+            operator: ADDRESSES.subjkt,
+            token_id: 0,
+          },
+        },
+      ])
+      .send({ amount: 0 })),
+
+    unregister: () => Tezos.wallet.at(ADDRESSES.unregistry).then((c) => {
+      c.methods.sign(undefined).send({ amount: 0 });
+    }),
+
+    load: false,
+    loading: () => editState({ load: !state.load }),
+    /* taquito */
+    Tezos: null,
+    wallet: null,
+    acc: null,
+
+    updateMessage: (message) => editState({ message }),
+
+    setAccount: async () => {
+      editState({
+        acc: Tezos !== undefined ? await wallet.client.getActiveAccount() : undefined,
+        address: await wallet.client.getActiveAccount(),
+      });
+    },
+
+    syncTaquito: async () => {
+      // console.log('Syncing taquito...');
+      const network = {
+        type: 'mainnet',
+        rpcUrl: 'https://mainnet.smartpy.io',
+      };
+
+      // We check the storage and only do a permission request if we don't have an active account yet
+      // This piece of code should be called on startup to "load" the current address from the user
+      // If the activeAccount is present, no "permission request" is required again, unless the user "disconnects" first.
+      const activeAccount = await wallet.client.getActiveAccount();
+      // console.log('Got active account.', activeAccount);
+
+      if (activeAccount === undefined) {
+        console.log('permissions');
+        // @ts-ignore
+        await wallet.requestPermissions({ network });
+      }
+
+      const acc = await wallet.client.getActiveAccount();
+      // console.log('Got acc.', acc);
+      const address = await wallet.getPKH();
+      // console.log('Got address.', address);
+
+      editState({
+        Tezos,
+        address,
+        acc,
+        wallet,
+      });
+      state.setAuth(address);
+      // console.log(this.state)
+    },
+
+    disconnect: async () => {
+      // console.log('disconnect wallet')
+      // This will clear the active account and the next "syncTaquito" will trigger a new sync
+      await wallet.client.clearActiveAccount();
+      editState({
+        address: undefined,
+        acc: undefined,
+      });
+    },
+
+    /*
+                  airgap/thanos interop methods
+              */
+    operationRequest: async (obj) => {
+      const op = obj.result;
+      delete op.mutez;
+      op.destination = op.to;
+      op.kind = 'transaction';
+      delete op.to;
+      // console.log(obj.result)
+
+      state.client.requestOperation({
+        operationDetails: [obj.result],
+      });
+    },
+
+    timeout: (delay) => new Promise((res) => setTimeout(res, delay)),
+
+    signPayload: async (obj) => {
+      await wallet.client
+        .requestSignPayload({
+          payload: obj.payload,
+        })
+        .then(async (response) => response.signature)
+        .catch((signPayloadError) => console.error(signPayloadError));
+    },
+
+    balance: 0,
+
+    refreshBalance: async (address: string) => {
+      if (!address) return null;
+      const balance = await Tezos.tz.getBalance(address);
+      /*
+            const balance = await axios
+                .get(`https://api.tzkt.io/v1/accounts/${address}/balance_history`, {
+                    params: {
+                        address: address,
+                    },
+                })
+                .then((res) => +res.data[res.data.length - 1].balance)
+                .catch((e) => console.error('balance error', e));
+            */
+      return editState({ balance: +balance / DIVIDER });
+    },
+
+    collapsed: true,
+
+    toogleNavbar: () => {
+      editState({ collapsed: !state.collapsed });
+    },
+
+    setMenu: (collapsed) => {
+      editState({ collapsed });
+    },
+
+    getStyle: (style) => (style ? { background: 'white' } : { display: 'none' }),
+
+    lastPath: '',
+
+    setPath: (path) => {
+      editState({
+        lastPath: path,
+      });
+    },
+    title: '',
+    setTitle: (title) => {
+      editState({
+        title,
+      });
+    },
+    hDAO_vote: localStorage.getItem('hDAO_vote'),
+
+    proxyFactoryAddress: 'KT1DoyD6kr8yLK8mRBFusyKYJUk2ZxNHKP1N',
+
+    mockProxy: async () => {
+      state.setFeedback({
+        visible: true,
+        message: 'creating collaborative contract',
+        progress: true,
+        confirm: false,
+      });
+
+      setTimeout(() => {
+        const result = {
+          opHash: 'opQ2gLDiqHCqhQTKK5h9vCnL3c3izFeB11SQRuFzUricptKH6pJ',
+        };
+
+        axios
+          .get(`https://api.tzkt.io/v1/operations/originations/${result.opHash}`)
+          .then(({ data }) => {
+            const { originatedContract } = data[0];
+
+            // We can either sign in now, or force a button to do so
+            // state.setProxyAddress(originatedContract.address)
+
+            editState({
+              originatedContract,
+            });
+
+            // We have got our contract address
+            state.setFeedback({
+              message: 'Collaborative contract created successfully',
+              progress: true,
+              confirm: false,
+            });
+
+            // Hide after a second
+            setTimeout(() => {
+              state.setFeedback({
+                visible: false,
+              });
+            }, 2000);
+          });
+      }, 2000);
+    },
+
+    originateProxy: async (administratorAddress, participantData) => {
+      // Show progress during creation
+      state.setFeedback({
+        visible: true,
+        message: 'creating collaborative contract',
+        progress: true,
+        confirm: false,
+      });
+
+      // packing participants data:
+      // (TODO: move to separate func)
+      const participantMap = MichelsonMap.fromLiteral(participantData);
+
+      const parser = new Parser();
+      const michelsonType = parser.parseData(createProxySchema);
+      const schema = new Schema(michelsonType);
+      const data = schema.Encode(participantMap);
+
+      // Is it okay to make it blocking?:
+      const { packed } = await Tezos.rpc.packData({
+        data,
+        type: michelsonType,
+      });
+
+      // Blockchain ops
+      await Tezos.wallet
+        .at(state.proxyFactoryAddress)
+        .then((c) => c.methods
+          .create_proxy(packed, 'hic_proxy')
+          .send({ amount: 0 }))
+        .then((result) => {
+          // TODO: this is a bit too nested for my liking
+
+          // Keep the operation hash for further queries if required (do we need this?)
+          editState({ op: result.opHash });
+
+          // Query tzkt.io to get the originated contract address
+          axios
+            .get<{ originatedContract: string; }>(`https://api.tzkt.io/v1/operations/originations/${result.opHash}`)
+            .then((response) => {
+              // Send the originated contract to the UI via context
+              // @ts-ignore
+              const { originatedContract } = response;
+              editState({ originatedContract }); // save hash
+
+              // We have got our contract address
+              state.setFeedback({
+                message: 'Collaborative contract created successfully',
+                progress: true,
+                confirm: false,
+              });
+
+              // Hide after a second
+              setTimeout(() => {
+                state.setFeedback({
+                  visible: false,
+                });
+              }, 1000);
+            });
+        })
+        .catch((e) => {
+          state.setFeedback({
+            message: e.message || 'an error occurred',
+            progress: false,
+            confirm: true,
+            confirmCallback: () => {
+              state.setFeedback({
+                visible: false,
+              });
+            },
+          });
+        });
+    },
+  });
+  React.useEffect(() => {
+    state.refreshBalance(state.acc?.address);
+    const interval = setInterval(() => {
+      if (state.acc?.address) state.refreshBalance(state.acc?.address);
+    }, 1000 * 10); // 60 seconds
+    return () => clearInterval(interval);
+  }, [state.acc?.address, state.refreshBalance]);
+  React.useEffect(() => {
+    window.setTimeout(() => {
+      state.setAccount?.();
+    }, 0);
+  }, [state.setAccount]);
+  return (
+    <HicetnuncContext.Provider value={ { ...state } }>
+      {children}
+    </HicetnuncContext.Provider>
+  );
+};
+
+export default HicetnuncContextProvider;
