@@ -4,13 +4,14 @@ import { TezosToolkit } from "@taquito/taquito";
 import { BeaconWallet } from "@taquito/beacon-wallet";
 import { NetworkType } from "@airgap/beacon-sdk";
 import { useDropzone } from "react-dropzone";
-const Tezos = new TezosToolkit("https://ithacanet.ecadinfra.com");
+const Tezos = new TezosToolkit("https://rpc.ghostnet.teztnets.xyz/");
 const wallet = new BeaconWallet({
-  name: "Hashland",
+  name: "Authentors",
   preferredNetwork: NetworkType.ITHACANET,
 });
 Tezos.setWalletProvider(wallet);
-const contractAddress = "KT1Hkg5qeNhfwpKW4fXvq7HGZB9z2EnmCCA9";
+// const contractAddress = "KT1Hkg5qeNhfwpKW4fXvq7HGZB9z2EnmCCA9";
+const contractAddress = "KT1U53EyJDvd7qzrcCsLF38ReJ9iPBXKNkRu";
 function MintContainer() {
   const [files, setFiles] = useState([]);
   const [tezConfig, setTezConfig] = useState({
@@ -62,8 +63,8 @@ function MintContainer() {
       console.log("Requesting permissions...");
       const permissions = await wallet.client.requestPermissions({
         network: {
-          type: NetworkType.ITHACANET,
-          rpcUrl: "https://ithacanet.ecadinfra.com",
+          type: NetworkType.GHOSTNET,
+          rpcUrl: "https://rpc.ghostnet.teztnets.xyz/",
         },
       });
       console.log("Got permissions:", permissions.address);

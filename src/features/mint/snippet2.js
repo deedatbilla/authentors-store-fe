@@ -93,3 +93,31 @@
       setStatus(`Error: ${err.message}`);
     }
   };
+
+  const getCoverAndThumbnail2 = async (objkt: ObjktInput): Promise<{
+    cover: Blob;
+    thumbnail: Blob;
+  }> => {
+    const {
+      objktFile,
+      coverFile,
+    } = objkt;
+    const fileForCover = objktFile.type?.includes('image') ? objktFile : coverFile;
+    const isGif = fileForCover?.type === MIMETYPE.GIF;
+    const cover = isGif ? fileForCover : await compressImage(fileForCover, coverOptions);
+    const thumbnail = isGif ? fileForCover : await compressImage(fileForCover, thumbnailOptions);
+    return { cover, thumbnail };
+  };
+
+  export const compressImage = (file, options): Promise<Blob> => new Promise(async (resolve, reject) => {
+    // eslint-disable-next-line no-new
+    new Compressor(file, {
+      ...options,
+      success(blob) {
+        resolve(blob);
+      },
+      error(err) {
+        reject(err);
+      },
+    });
+  });
