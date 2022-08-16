@@ -18,6 +18,7 @@ const Profile = React.lazy(() =>
   import("./features/profile/profile-container")
 );
 const MintPage = React.lazy(() => import("./features/mint/mint-container"));
+const CreateCollectionPage = React.lazy(() => import("./features/collections/createCollection"));
 function Routes() {
   const dispatch = useDispatch();
   const embedKukai = useSelector(getEmbedKukai);
@@ -63,6 +64,7 @@ function Routes() {
             component={Profile}
           />
           <PublicRoute restricted={false} path="/mint" component={MintPage} />
+          <PublicRoute restricted={false} path="/create-collection" component={CreateCollectionPage}/>
           <PublicRoute restricted={false} path="/" component={Home} />
         </Switch>
         <Footer />
